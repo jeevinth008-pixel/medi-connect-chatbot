@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediConnect — Health Assistant</title>
+<style>
+  :root{
+    --bg: #F4FAF8;
+    --surface: #FFFFFF;
+    --primary: #0B4F4A;
+    --primary-deep: #062E2B;
+    --primary-light: #E1F1EC;
+    --accent: #2E9C8F;
+    --alert: #D9481F;
+    --alert-light: #FCE7DF;
+    --ink: #14302B;
+    --muted: #6C8A84;
+    --border: #DCEAE6;
+    --mono: 'Courier New', Courier, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans);
+    display:flex; justify-content:center;
+    padding:24px 14px;
+    min-height:100vh;
+  }
+  .app{
+    width:100%; max-width:960px;
+    background:var(--surface);
+    border-radius:18px;
+    border:1px solid var(--border);
+    box-shadow:0 20px 50px -25px rgba(6,46,43,0.35);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  /* ---------- HEADER ---------- */
+  header{
+    background:var(--primary-deep);
+    color:#fff;
+    padding:18px 24px 0 24px;
+  }
+  .header-top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(145deg, var(--accent), #1a6e63);
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px;
+  }
+  .brand-name{
+    font-weight:800; letter-spacing:0.5px; font-size:18px;
+  }
+  .brand-sub{
+    font-family:var(--mono); font-size:10.5px; color:#9FC9C1;
+    letter-spacing:1px; text-transform:uppercase; margin-top:1px;
+  }
+  .status-pill{
+    font-family:var(--mono); font-size:11px; color:#9FC9C1;
+    border:1px solid #1f5c55; padding:5px 10px; border-radius:20px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:#4ADE80; animation:blink 2s infinite; }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ECG signature divider */
+  .ecg-wrap{ height:30px; overflow:hidden; }
+  .ecg-line{
+    width:200%; height:30px;
+    stroke:var(--accent); stroke-width:2; fill:none;
+    animation:scroll-ecg 6s linear infinite;
+  }
+  @keyframes scroll-ecg{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  .disclaimer{
+    background:var(--alert-light); color:#8A3212;
+    font-size:12px; padding:9px 24px;
+    border-bottom:1px solid #f3cbb8;
+  }
+
+  /* ---------- BODY LAYOUT ---------- */
+  .body-layout{ display:flex; min-height:520px; }
+  aside{
+    width:210px; flex-shrink:0;
+    background:var(--primary-light);
+    border-right:1px solid var(--border);
+    padding:16px 12px;
+  }
+  .aside-label{
+    font-family:var(--mono); font-size:10px; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--muted); padding:0 8px 8px;
+  }
+  .quick-btn{
+    width:100%; text-align:left; background:transparent; border:none;
+    padding:9px 8px; border-radius:8px; font-size:13px; color:var(--primary-deep);
+    cursor:pointer; display:flex; align-items:center; gap:8px;
+    font-family:var(--sans);
+  }
+  .quick-btn:hover{ background:#CFE9E2; }
+  .quick-btn .em{ font-size:15px; }
+  .quick-divider{ height:1px; background:var(--border); margin:10px 4px; }
+
+  main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .chat-window{
+    flex:1; padding:20px 22px; overflow-y:auto;
+    display:flex; flex-direction:column; gap:14px;
+    max-height:520px;
+  }
+  .msg{ display:flex; gap:10px; max-width:82%; }
+  .msg.bot{ align-self:flex-start; }
+  .msg.user{ align-self:flex-end; flex-direction:row-reverse; }
+  .avatar{
+    width:28px; height:28px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+    margin-top:2px;
+  }
+  .msg.bot .avatar{ background:var(--primary-light); }
+  .msg.user .avatar{ background:var(--primary); color:#fff; }
+  .bubble{
+    padding:10px 13px; border-radius:12px; font-size:14px; line-height:1.5;
+    white-space:pre-wrap;
+  }
+  .msg.bot .bubble{ background:var(--primary-light); border-top-left-radius:3px; color:var(--ink); }
+  .msg.user .bubble{ background:var(--primary); color:#fff; border-top-right-radius:3px; }
+  .bubble.emergency{ background:var(--alert-light); border:1px solid #f3b596; color:#8A3212; font-weight:600; }
+  .bubble .tag{
+    display:block; font-family:var(--mono); font-size:10px; letter-spacing:1px;
+    text-transform:uppercase; color:var(--muted); margin-bottom:4px; font-weight:600;
+  }
+  .bubble.emergency .tag{ color:#8A3212; }
+  .choice-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .choice-btn{
+    background:#fff; border:1px solid var(--accent); color:var(--primary-deep);
+    padding:5px 10px; border-radius:20px; font-size:12px; cursor:pointer;
+    font-family:var(--sans);
+  }
+  .choice-btn:hover{ background:var(--accent); color:#fff; }
+
+  .typing{ display:flex; gap:4px; align-items:center; padding:4px 0; }
+  .typing span{
+    width:6px; height:6px; border-radius:50%; background:var(--accent);
+    animation:pulse-dot 1s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:0.15s; }
+  .typing span:nth-child(3){ animation-delay:0.3s; }
+  @keyframes pulse-dot{ 0%,100%{ transform:scale(0.6); opacity:0.4;} 50%{ transform:scale(1); opacity:1;} }
+
+  .input-row{
+    border-top:1px solid var(--border); padding:14px 18px;
+    display:flex; gap:10px; background:#fff;
+  }
+  .input-row input{
+    flex:1; border:1px solid var(--border); border-radius:10px;
+    padding:11px 14px; font-size:14px; outline:none; font-family:var(--sans);
+  }
+  .input-row input:focus{ border-color:var(--accent); }
+  .input-row button{
+    background:var(--primary); color:#fff; border:none; border-radius:10px;
+    padding:0 18px; font-size:13px; font-weight:700; cursor:pointer;
+    letter-spacing:0.3px;
+  }
+  .input-row button:hover{ background:var(--primary-deep); }
+
+  @media (max-width:640px){
+    .body-layout{ flex-direction:column; }
+    aside{ width:100%; display:flex; flex-wrap:wrap; gap:4px; border-right:none; border-bottom:1px solid var(--border); }
+    .aside-label{ width:100%; }
+    .quick-btn{ width:auto; }
+    .quick-divider{ display:none; }
+    .chat-window{ max-height:400px; }
+  }
+
+  /* ---------- AI chat additions ---------- */
+  .header-actions{ display:flex; align-items:center; gap:10px; }
+  .new-chat{
+    background:transparent; border:1px solid #1f5c55; color:#cfe9e3; border-radius:20px;
+    padding:5px 12px; font-size:11px; cursor:pointer; font-family:var(--mono); letter-spacing:0.5px;
+  }
+  .new-chat:hover{ background:#0f3d38; }
+  .bubble{ white-space:normal; overflow-wrap:anywhere; }
+  .bubble .body p{ margin:0 0 8px; }
+  .bubble .body p:last-child{ margin-bottom:0; }
+  .bubble .body ul, .bubble .body ol{ margin:0 0 8px; padding-left:20px; }
+  .bubble .body li{ margin-bottom:3px; }
+  .msg.user .body{ white-space:pre-wrap; }
+  .bubble.error{ background:#FFF4E5; border:1px solid #f0c98a; color:#7a4a00; }
+  .bubble.error .tag{ color:#7a4a00; }
+  .choice-btn:disabled{ opacity:0.45; cursor:default; background:#fff; color:var(--primary-deep); }
+  .input-row input:disabled, .input-row button:disabled{ opacity:0.55; cursor:not-allowed; }
+  .quick-btn:focus-visible, .choice-btn:focus-visible, .new-chat:focus-visible, .input-row button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  @media (max-width:640px){
+    .input-row input{ font-size:16px; }
+    .header-actions{ flex-direction:column; align-items:flex-end; gap:6px; }
+  }
+  @media (prefers-reduced-motion: reduce){ .ecg-line, .dot, .typing span{ animation:none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-mark">🩺</div>
+        <div>
+          <div class="brand-name">MediConnect</div>
+          <div class="brand-sub">AI Health Assistant</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="status-pill"><span class="dot"></span> AI ASSISTANT</div>
+        <button class="new-chat" id="newChatBtn" type="button" title="Start a new conversation">+ NEW CHAT</button>
+      </div>
+    </div>
+    <div class="ecg-wrap">
+      <svg class="ecg-line" viewBox="0 0 800 30" preserveAspectRatio="none">
+        <path d="M0,15 L60,15 L75,15 L85,2 L95,28 L105,15 L120,15 L400,15 L415,15 L425,2 L435,28 L445,15 L460,15 L800,15 L860,15 L875,2 L885,28 L895,15 L910,15 L1200,15" />
+      </svg>
+    </div>
+  </header>
+
+  <div class="disclaimer">
+    ⚠️ Educational AI assistant — not a substitute for professional medical advice, diagnosis, or treatment. Booking, records and reminders are simulated demos. Please don't share names, phone numbers or ID numbers. In an emergency call 112 immediately.
+  </div>
+
+  <div class="body-layout">
+    <aside>
+      <div class="aside-label">Quick Actions</div>
+      <button class="quick-btn" data-q="I have a cough and fever"><span class="em">🩺</span> Symptom check</button>
+      <button class="quick-btn" data-q="Which doctor should I consult for skin problems?"><span class="em">👨‍⚕️</span> Find a doctor</button>
+      <button class="quick-btn" data-q="I want to book a doctor"><span class="em">📅</span> Book appointment</button>
+      <button class="quick-btn" data-q="What is paracetamol generally used for?"><span class="em">💊</span> Medicine info</button>
+      <button class="quick-btn" data-q="Show my recent appointments"><span class="em">📋</span> My records</button>
+      <button class="quick-btn" data-q="When is my next appointment?"><span class="em">🔔</span> Reminders</button>
+      <div class="quick-divider"></div>
+      <button class="quick-btn" data-q="What is diabetes?"><span class="em">❓</span> Health FAQs</button>
+      <div class="quick-divider"></div>
+      <button class="quick-btn" data-q="I am having severe chest pain and can't breathe" style="color:#8A3212;"><span class="em">🚨</span> Emergency help</button>
+    </aside>
+
+    <main>
+      <div class="chat-window" id="chatWindow" role="log" aria-live="polite"></div>
+      <div class="input-row">
+        <input id="userInput" type="text" maxlength="2000" aria-label="Type your message" placeholder="Ask a health question…" autocomplete="off">
+        <button id="sendBtn">Send</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Configuration (public values only; see config.js) ----------
+  const CFG = window.MEDICONNECT_CONFIG || {};
+  const BACKEND = String(CFG.BACKEND_URL || '').replace(/\/+$/, '');
+  const API_URL = BACKEND + '/api/chat';
+  const BACKEND_READY = BACKEND !== '' && !/YOUR-PROJECT/i.test(BACKEND);
+  const REQUEST_TIMEOUT_MS = 30000;
+  const MAX_HISTORY = 20, MAX_USER_CHARS = 2000, MAX_TOTAL_CHARS = 30000;
+
+  const chatWindow = document.getElementById('chatWindow');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const newChatBtn = document.getElementById('newChatBtn');
+
+  // ---------- State ----------
+  let history = [];            // [{role, content}] sent to the AI (current session only)
+  let busy = false;
+  let abortCtl = null;
+  let flow = { step: null, specialty: null, doctor: null, slot: null }; // demo booking flow
+
+  // ---------- Demo data (SIMULATED: not real doctors, slots or records) ----------
+  const doctors = {
+    'Dermatologist': ['Dr. Anika Rao', 'Dr. Farhan Sheikh'],
+    'General Physician': ['Dr. Priya Menon', 'Dr. Karthik Iyer'],
+    'Cardiologist': ['Dr. Sunil Varma', 'Dr. Leela Nair'],
+    'Dentist': ['Dr. Rohan Shah', 'Dr. Meera Pillai'],
+    'Ophthalmologist': ['Dr. Ayesha Khan'],
+    'Orthopedist': ['Dr. Vikram Desai'],
+    'Pediatrician': ['Dr. Nisha Gupta'],
+    'Gastroenterologist': ['Dr. Arjun Nambiar'],
+    'Psychiatrist': ['Dr. Divya Krishnan'],
+    'ENT Specialist': ['Dr. Ramesh Pillai'],
+    'Gynecologist': ['Dr. Sonal Kapoor'],
+    'Endocrinologist': ['Dr. Rajeev Menon'],
+    'Neurologist': ['Dr. Kavita Rao'],
+    'Allergist': ['Dr. Imran Baig']
+  };
+  const demoSlots = ['Mon 10:00 AM', 'Mon 3:30 PM', 'Wed 11:15 AM', 'Thu 9:00 AM', 'Fri 4:00 PM'];
+  const demoAppointments = [
+    { doctor: 'Dr. Priya Menon', specialty: 'General Physician', when: '18 Aug 2026, 10:30 AM', status: 'Completed (sample)' },
+    { doctor: 'Dr. Rohan Shah', specialty: 'Dentist', when: '12 Nov 2026, 3:00 PM', status: 'Upcoming (sample)' }
+  ];
+  const DEMO = ' · DEMO';
+
+  // ---------- Safe DOM rendering (never uses innerHTML for AI or user text) ----------
+  function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+
+  function renderInline(parent, text) {
+    String(text).split(/(\*\*[^*\n]+\*\*)/g).forEach((part) => {
+      if (!part) return;
+      if (/^\*\*[^*\n]+\*\*$/.test(part)) { const b = el('strong'); b.textContent = part.slice(2, -2); parent.appendChild(b); }
+      else parent.appendChild(document.createTextNode(part));
+    });
+  }
+
+  // Supports: paragraphs, "- " / "* " bullets, "1." lists, **bold**. Everything else is literal text.
+  function renderRich(container, text) {
+    container.textContent = '';
+    let para = [], list = null, listType = null;
+    const flushPara = () => { if (para.length) { const p = el('p'); renderInline(p, para.join(' ')); container.appendChild(p); para = []; } };
+    String(text).replace(/\r/g, '').split('\n').forEach((raw) => {
+      const line = raw.trim();
+      let m;
+      if (!line) { flushPara(); list = null; listType = null; return; }
+      if ((m = line.match(/^[-*\u2022]\s+(.*)$/))) {
+        flushPara();
+        if (listType !== 'ul') { list = el('ul'); container.appendChild(list); listType = 'ul'; }
+        const li = el('li'); renderInline(li, m[1]); list.appendChild(li); return;
+      }
+      if ((m = line.match(/^\d+[.)]\s+(.*)$/))) {
+        flushPara();
+        if (listType !== 'ol') { list = el('ol'); container.appendChild(list); listType = 'ol'; }
+        const li = el('li'); renderInline(li, m[1]); list.appendChild(li); return;
+      }
+      list = null; listType = null;
+      para.push(line.replace(/^#{1,6}\s+/, ''));
+    });
+    flushPara();
+  }
+
+  function scrollDown() { chatWindow.scrollTop = chatWindow.scrollHeight; }
+
+  function addMessage(sender, text, opts) {
+    opts = opts || {};
+    const wrap = el('div', 'msg ' + sender);
+    const avatar = el('div', 'avatar'); avatar.textContent = sender === 'bot' ? '🩺' : '🙂';
+    const bubble = el('div', 'bubble' + (opts.emergency ? ' emergency' : '') + (opts.error ? ' error' : ''));
+    if (opts.tag) { const tag = el('span', 'tag'); tag.textContent = opts.tag; bubble.appendChild(tag); }
+    const body = el('div', 'body');
+    if (sender === 'bot') renderRich(body, text); else body.textContent = text;
+    bubble.appendChild(body);
+    if (opts.choices) {
+      const row = el('div', 'choice-row');
+      opts.choices.forEach((c) => {
+        const b = el('button', 'choice-btn'); b.type = 'button'; b.textContent = c;
+        b.onclick = () => { row.querySelectorAll('button').forEach((x) => (x.disabled = true)); handleUser(c); };
+        row.appendChild(b);
+      });
+      bubble.appendChild(row);
+    }
+    if (opts.retry) {
+      const row = el('div', 'choice-row');
+      const b = el('button', 'choice-btn'); b.type = 'button'; b.textContent = 'Try again';
+      b.onclick = () => { b.disabled = true; askAI(opts.retry); };
+      row.appendChild(b); bubble.appendChild(row);
+    }
+    wrap.appendChild(avatar); wrap.appendChild(bubble);
+    chatWindow.appendChild(wrap); scrollDown();
+    return wrap;
+  }
+
+  function showTyping() {
+    const wrap = el('div', 'msg bot');
+    const avatar = el('div', 'avatar'); avatar.textContent = '🩺';
+    const bubble = el('div', 'bubble'); const t = el('div', 'typing');
+    for (let i = 0; i < 3; i++) t.appendChild(el('span'));
+    bubble.appendChild(t); wrap.appendChild(avatar); wrap.appendChild(bubble);
+    chatWindow.appendChild(wrap); scrollDown();
+    return wrap;
+  }
+
+  function botLater(fn, delay) { const t = showTyping(); setTimeout(() => { t.remove(); fn(); }, delay || 400); }
+
+  function setBusy(v) {
+    busy = v; sendBtn.disabled = v; userInput.disabled = v;
+    sendBtn.textContent = v ? '…' : 'Send';
+    if (!v && !window.matchMedia('(pointer: coarse)').matches) userInput.focus();
+  }
+
+  // ---------- Emergency pre-check (copy of backend rules so it works offline) ----------
+  const EMERGENCY_RULES = [
+    { kind: 'medical', test: (t) => /\b(can'?t|cannot|can not|unable to|struggling to|hard to|difficulty|trouble)\s*(to\s+)?breath(e|ing)?\b/.test(t) || /\b(not|stopped|stops)\s+breathing\b/.test(t) || /\bgasping for (air|breath)\b/.test(t) },
+    { kind: 'medical', test: (t) => /\bchest\s+(pain|pressure|tightness|heaviness)\b/.test(t) && /\b(severe|crushing|sudden|worst|radiat\w*|left arm|jaw|sweat\w*|breath\w*|faint\w*|dizzy|nausea)\b/.test(t) },
+    { kind: 'medical', test: (t) => /\b(having|might be having|think i'?m having|think he'?s having|think she'?s having)\s+a\s+heart attack\b/.test(t) },
+    { kind: 'medical', test: (t) => /\bface\s+(is\s+)?(droop\w*|numb)\b/.test(t) || /\bslurred speech\b/.test(t) || /\bsudden(ly)?\s+(weakness|numbness|confusion|loss of (vision|speech|balance))\b/.test(t) || /\bcan'?t\s+(move|lift|raise)\s+(my|his|her)?\s*(arm|leg|face)\b/.test(t) },
+    { kind: 'medical', test: (t) => /\b(unconscious|unresponsive|passed out|won'?t wake up|not waking up|collapsed|blacked out|losing consciousness)\b/.test(t) },
+    { kind: 'medical', test: (t) => /\b(severe|heavy|uncontrolled|massive)\s+bleeding\b/.test(t) || /\bbleeding\b.{0,30}\b(won'?t stop|not stopping|heavily)\b/.test(t) || /\b(vomiting|coughing up|throwing up)\s+blood\b/.test(t) },
+    { kind: 'medical', test: (t) => /\b(having|had|started having|is having|has had)\s+(a\s+)?(seizure|convulsion|fit)s?\b/.test(t) },
+    { kind: 'medical', test: (t) => /\banaphyla\w*\b/.test(t) || /\b(throat|tongue|lips|face)\s+(is\s+)?(closing|swelling|swollen)\b/.test(t) || /\bswelling (of|in) (my |the )?(throat|tongue|lips|face)\b/.test(t) },
+    { kind: 'medical', test: (t) => /\b(is|am|are|was)\s+choking\b/.test(t) },
+    { kind: 'medical', test: (t) => /\boverdos\w*\b/.test(t) || /\btook too many (pills|tablets|capsules)\b/.test(t) || /\bswallowed\s+(poison|bleach|pesticide|kerosene|acid)\b/.test(t) },
+    { kind: 'mental_health', test: (t) => /\b(suicidal|kill myself|end my life|want to die|wanna die|don'?t want to (live|be alive)|thinking (of|about) (suicide|killing myself)|hurt myself|harm myself)\b/.test(t) }
+  ];
+  const EMERGENCY_REPLY = {
+    medical:
+      "**This could be a medical emergency. Please call 112 now** (India's emergency number; ambulance is 108 in many states) or go to the nearest emergency department immediately.\n\n" +
+      "- Don't wait for an online reply, and don't drive yourself if you feel faint or unwell.\n" +
+      "- Tell the operator your exact location and what is happening.\n" +
+      "- Ask someone nearby to stay with you. If a person is unresponsive and not breathing normally, the operator can guide you through CPR.\n\n" +
+      "I'm an educational assistant and can't assess your condition or send help. Once you are safe, I can answer follow-up questions.",
+    mental_health:
+      "I'm really sorry you're going through this. Your safety matters.\n\n" +
+      "**If you might act on these thoughts or are in immediate danger, call 112 now** or go to the nearest emergency department. Please don't stay alone: reach out to a family member, friend or neighbour and ask them to be with you.\n\n" +
+      "You can also call **Tele-MANAS at 14416**, India's government mental health helpline, available in many languages.\n\n" +
+      "I'm an educational assistant and can't provide crisis care, but I'm here to keep talking while you reach out to them."
+  };
+  function checkEmergency(text) {
+    const t = String(text).toLowerCase().replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[^a-z0-9'\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const hits = EMERGENCY_RULES.filter((r) => r.test(t));
+    if (!hits.length) return null;
+    return hits.some((h) => h.kind === 'mental_health') ? 'mental_health' : 'medical';
+  }
+
+  // ---------- History handling ----------
+  function trimHistory(arr) {
+    let h = arr.slice(-MAX_HISTORY);
+    let total = h.reduce((n, m) => n + m.content.length, 0);
+    while (h.length > 1 && total > MAX_TOTAL_CHARS) { total -= h[0].content.length; h = h.slice(1); }
+    while (h.length && h[0].role !== 'user') h = h.slice(1);
+    return h;
+  }
+
+  // ---------- AI request ----------
+  const FALLBACK_ERRORS = {
+    NETWORK: "I couldn't reach the MediConnect backend. Check your internet connection and try again. (If this keeps happening, the site owner should check the backend URL and the allowed-origin (CORS) setting.)",
+    TIMEOUT: 'The request timed out. Please try again.',
+    INVALID_RESPONSE: 'The server sent an unexpected response. Please try again.',
+    HTTP: 'The server returned an error. Please try again later.'
+  };
+
+  async function askAI(text) {
+    if (busy) return;
+    if (!BACKEND_READY) {
+      addMessage('bot', "The AI backend isn't configured yet. The site owner must set BACKEND_URL in config.js (see the README). Until then, only the simulated demo features and emergency guidance work.", { tag: '⚠️ Not configured', error: true });
+      return;
+    }
+    setBusy(true);
+    const typing = showTyping();
+    const outgoing = trimHistory(history.concat([{ role: 'user', content: text }]));
+    const ctl = new AbortController(); abortCtl = ctl;
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, REQUEST_TIMEOUT_MS);
+    try {
+      let res;
+      try {
+        res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: outgoing }), signal: ctl.signal });
+      } catch (e) {
+        if (timedOut) throw { code: 'TIMEOUT' };
+        if (ctl.cancelledByUser) return;
+        throw { code: 'NETWORK' };
+      }
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+      if (!res.ok) throw { code: (data && data.error && data.error.code) || 'HTTP', message: data && data.error && data.error.message };
+      if (!data || typeof data.reply !== 'string' || !data.reply.trim()) throw { code: 'INVALID_RESPONSE' };
+
+      history = trimHistory(history.concat([{ role: 'user', content: text }, { role: 'assistant', content: data.reply }]));
+      typing.remove();
+      addMessage('bot', data.reply, data.emergency ? { tag: '🚨 Emergency guidance', emergency: true } : { tag: '🩺 MediConnect AI' });
+    } catch (err) {
+      typing.remove();
+      const code = (err && err.code) || 'HTTP';
+      const msg = (err && typeof err.message === 'string' && err.message) || FALLBACK_ERRORS[code] || FALLBACK_ERRORS.HTTP;
+      const retryable = !['AI_AUTH', 'AI_BILLING', 'SERVER_NOT_CONFIGURED', 'ORIGIN_NOT_ALLOWED', 'MESSAGE_TOO_LONG'].includes(code);
+      addMessage('bot', msg, { tag: '⚠️ Assistant unavailable', error: true, retry: retryable ? text : null });
+    } finally {
+      clearTimeout(timer);
+      if (abortCtl === ctl) abortCtl = null;
+      typing.remove();
+      setBusy(false);
+    }
+  }
+
+  // ---------- Emergency (instant, no network) ----------
+  function showEmergency(text, kind) {
+    const reply = EMERGENCY_REPLY[kind];
+    history = trimHistory(history.concat([{ role: 'user', content: text }, { role: 'assistant', content: reply }]));
+    addMessage('bot', reply, { tag: '🚨 Emergency guidance', emergency: true });
+  }
+
+  // ---------- Simulated demo workflows (not real bookings or records) ----------
+  const isReminderIntent = (t) => /\b(next|upcoming)\s+appointment\b|\bremind/i.test(t);
+  const isRecordsIntent = (t) => /\b(my|recent|past|previous)\b[^.?!]{0,20}\b(appointments?|records?|visits?)\b|\bmedical records?\b/i.test(t);
+  const isBookingIntent = (t) => /\b(book|schedule|arrange|fix)\b[^.?!]{0,40}\b(appointment|doctor|consultation|slot|dentist|dermatologist|cardiologist|physician)\b|\bwant to book\b/i.test(t);
+
+  function showRecords() {
+    botLater(() => {
+      const lines = demoAppointments.map((a) => '- ' + a.when + ': ' + a.doctor + ' (' + a.specialty + '), ' + a.status).join('\n');
+      addMessage('bot', '**Simulated demo data.** MediConnect is not connected to a hospital system, so these are sample records that only exist in this browser tab.\n\n' + lines, { tag: '📋 My records' + DEMO });
+    });
+  }
+  function showReminder() {
+    botLater(() => {
+      const next = demoAppointments.find((a) => /^Upcoming/.test(a.status));
+      if (next) addMessage('bot', '**Simulated demo data.** Your next sample appointment is with **' + next.doctor + '** (' + next.specialty + ') on **' + next.when + '**. No real reminders are sent.', { tag: '🔔 Reminders' + DEMO });
+      else addMessage('bot', 'No upcoming sample appointments. You can try the demo booking flow.', { tag: '🔔 Reminders' + DEMO, choices: ['I want to book a doctor'] });
+    });
+  }
+
+  function startBooking(text) {
+    const spec = Object.keys(doctors).find((s) => text.toLowerCase().includes(s.toLowerCase()));
+    flow = { step: spec ? 'doctor' : 'specialty', specialty: spec || null, doctor: null, slot: null };
+    botLater(() => {
+      const note = '**Demo only:** this flow simulates booking. No real appointment is created and no doctor or hospital is notified.\n\n';
+      if (spec) addMessage('bot', note + 'Which ' + spec + ' would you like?', { tag: '📅 Book appointment' + DEMO, choices: doctors[spec].concat(['Cancel']) });
+      else addMessage('bot', note + 'Which specialty do you need?', { tag: '📅 Book appointment' + DEMO, choices: Object.keys(doctors).concat(['Cancel']) });
+    });
+  }
+
+  function endFlow() { flow = { step: null, specialty: null, doctor: null, slot: null }; }
+
+  function continueBooking(text) {
+    const low = text.toLowerCase();
+    const tag = '📅 Book appointment' + DEMO;
+    if (/^\s*cancel\s*$/.test(low)) { endFlow(); botLater(() => addMessage('bot', 'Demo booking cancelled. Nothing was booked.', { tag })); return; }
+    if (flow.step === 'specialty') {
+      const spec = Object.keys(doctors).find((s) => low.includes(s.toLowerCase()));
+      if (spec) { flow.specialty = spec; flow.step = 'doctor'; botLater(() => addMessage('bot', 'Which ' + spec + ' would you like?', { tag, choices: doctors[spec].concat(['Cancel']) })); }
+      else botLater(() => addMessage('bot', 'Please choose a specialty from the list (or type Cancel).', { tag, choices: Object.keys(doctors).concat(['Cancel']) }));
+      return;
+    }
+    if (flow.step === 'doctor') {
+      const doc = doctors[flow.specialty].find((d) => low.includes(d.toLowerCase().replace('dr. ', '')));
+      if (doc) { flow.doctor = doc; flow.step = 'slot'; botLater(() => addMessage('bot', 'Pick a sample time slot with **' + doc + '**:', { tag, choices: demoSlots.concat(['Cancel']) })); }
+      else botLater(() => addMessage('bot', 'Please choose a doctor from the list (or type Cancel).', { tag, choices: doctors[flow.specialty].concat(['Cancel']) }));
+      return;
+    }
+    if (flow.step === 'slot') {
+      const slot = demoSlots.find((s) => low === s.toLowerCase());
+      if (slot) { flow.slot = slot; flow.step = 'confirm'; botLater(() => addMessage('bot', 'Confirm this **simulated** booking?\n\n' + flow.doctor + ' (' + flow.specialty + '), ' + slot, { tag, choices: ['Confirm demo booking', 'Cancel'] })); }
+      else botLater(() => addMessage('bot', 'Please choose one of the sample slots (or type Cancel).', { tag, choices: demoSlots.concat(['Cancel']) }));
+      return;
+    }
+    if (flow.step === 'confirm') {
+      if (low.includes('confirm')) {
+        demoAppointments.push({ doctor: flow.doctor, specialty: flow.specialty, when: flow.slot, status: 'Upcoming (sample, simulated)' });
+        const d = flow.doctor, s = flow.slot; endFlow();
+        botLater(() => addMessage('bot', '**Simulated booking recorded in this browser tab only.** No real appointment exists: no doctor or hospital was contacted. To book a real appointment, contact the hospital or clinic directly.\n\n' + d + ', ' + s, { tag: '📅 Demo booking recorded' }));
+      } else botLater(() => addMessage('bot', 'Please confirm or cancel the demo booking.', { tag, choices: ['Confirm demo booking', 'Cancel'] }));
+    }
+  }
+
+  // ---------- Main dispatcher ----------
+  async function handleUser(raw) {
+    const text = String(raw || '').trim();
+    if (!text || busy) return;
+    if (text.length > MAX_USER_CHARS) {
+      addMessage('bot', 'That message is too long (maximum ' + MAX_USER_CHARS + ' characters). Please shorten it.', { tag: '⚠️ Message too long', error: true });
+      return;
+    }
+    addMessage('user', text);
+
+    const emergencyKind = checkEmergency(text);
+    if (emergencyKind) {
+      endFlow();
+      showEmergency(text, emergencyKind);
+      return;
+    }
+
+
+    if (flow.step) { continueBooking(text); return; }
+    if (isReminderIntent(text)) { showReminder(); return; }
+    if (isRecordsIntent(text)) { showRecords(); return; }
+    if (isBookingIntent(text)) { startBooking(text); return; }
+
+    await askAI(text);
+  }
+
+  // ---------- Conversation reset ----------
+  function welcome() {
+    addMessage('bot',
+      "Hi, I'm the MediConnect AI health assistant. I can explain health topics, symptoms, tests, medicines (in general terms) and which specialist usually handles what.\n\n" +
+      "Please note:\n- I'm educational only and can't diagnose or replace a doctor.\n- Booking, records and reminders are **simulated demo features**; no real appointments are made.\n- I only remember this chat until you refresh the page or tap **New chat**.\n\nHow can I help?",
+      { tag: '🩺 Welcome' });
+  }
+  function newChat() {
+    if (abortCtl) { abortCtl.cancelledByUser = true; abortCtl.abort(); abortCtl = null; }
+    history = []; endFlow();
+    chatWindow.textContent = '';
+    setBusy(false);
+    welcome();
+  }
+
+  // ---------- Wire up UI ----------
+  function submit() { const v = userInput.value; if (!v.trim() || busy) return; userInput.value = ''; handleUser(v); }
+  sendBtn.addEventListener('click', submit);
+  userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
+  newChatBtn.addEventListener('click', newChat);
+  document.querySelectorAll('.quick-btn').forEach((btn) => btn.addEventListener('click', () => handleUser(btn.dataset.q)));
+
+  welcome();
+})();
+</script>
+</body>
+</html>
